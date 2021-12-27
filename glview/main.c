@@ -5,11 +5,13 @@
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
+#include <string.h>
 
 #include "draw_function.h"
 #include "tex.h"
 #include "matrix_function.h"
 #include "action.h"
+#include "font.h"
 
 #define PI 3.141592653589793
 
@@ -43,11 +45,36 @@ Mode mode = WATCH;
 
 extern int pick_obj;
 
+GLuint base;
+
+void drawString(char *string)
+{
+  glPushAttrib(GL_LIST_BASE);
+
+  /* 文字フォントディスプレイリストの開始位置 */
+  glListBase(base);
+
+  /* ディスプレイリスト(文字列)を描画  */
+  glCallLists(strlen(string), GL_UNSIGNED_BYTE, (GLubyte *)string);
+  glPopAttrib();
+}
+
 //-----------------------------------------------------------------------------------
 // 初期化
 //-----------------------------------------------------------------------------------
 void init(void)
 {
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  /* ディスプレイリスト領域を 128 個獲得 */
+  base = glGenLists(0x80);
+  // /* 各文字のビットマップデータを各ディスプレイリストに割り当てる */
+  int  l = 0;
+  for (int i = 0x20; i < 0x80; i++) {
+    glNewList(base + i, GL_COMPILE_AND_EXECUTE);
+    glBitmap(8, 16, 0.0f, 0.0f, 9.0f, 0.0f, font[l++]);
+    glEndList();
+  }
+
   srand((unsigned int)time(NULL));
   initCat(6); //ねこ生成
   texinit(); //テクスチャ作成
@@ -126,8 +153,12 @@ void display(void)
   glPushMatrix();{
     glDisable( GL_LIGHTING ); //光源処理無効
     glRotated(atan2(4,12)*360.0/(2*PI), 1.0, 0.0, 0.0);
-    drawStr(mode);
     drawMap(-5, 5.2, 60);
+    glColor3d(255/255, 140/255.0, 0.0);
+    glRasterPos2d(-4.25, 4.15); /* 描画位置 */
+    drawString("MODE: "); /* 文字列描画 */
+    glFlush();
+    // drawStr(mode);
     
     if(mode == BREED||mode == CARRY){
       glTranslated(0,0.0,-5);
@@ -302,6 +333,7 @@ int main(int argc, char** argv)
   glutInitWindowSize (winW, winH);
   glutInitWindowPosition (50, 50);
   glutCreateWindow ("planet");
+
 
   init();
   
